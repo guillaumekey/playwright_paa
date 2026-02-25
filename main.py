@@ -6,7 +6,11 @@ app = FastAPI()
 @app.get("/paa")
 async def get_paa(q: str):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+        # Remplace ta ligne browser = ... par celle-ci :
+        browser = await p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-setuid-sandbox"]
+        )
         page = await browser.new_page()
         await page.goto(f"https://www.google.com/search?q={q}&hl=fr")
         
