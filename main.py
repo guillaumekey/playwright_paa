@@ -1,11 +1,19 @@
 from fastapi import FastAPI
 from playwright.async_api import async_playwright
+import os
 
 app = FastAPI()
 
 @app.get("/paa")
 async def get_paa(q: str):
+    # CETTE LIGNE DIT À PLAYWRIGHT OÙ REGARDER DANS DOCKER
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/ms-playwright"
+    
     async with async_playwright() as p:
+        browser = await p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-setuid-sandbox"]
+        )
         # Remplace ta ligne browser = ... par celle-ci :
         browser = await p.chromium.launch(
             headless=True,
