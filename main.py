@@ -6,9 +6,6 @@ app = FastAPI()
 
 @app.get("/paa")
 async def get_paa(q: str):
-    # CETTE LIGNE DIT À PLAYWRIGHT OÙ REGARDER DANS DOCKER
-    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = "/ms-playwright"
-    
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=True,
