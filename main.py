@@ -5,8 +5,24 @@ import undetected_chromedriver as uc
 import asyncio
 import random
 import time
+import subprocess
+import re
 
 app = FastAPI()
+
+
+def get_chrome_major_version():
+    """Detect installed Chrome major version for ChromeDriver compatibility."""
+    try:
+        output = subprocess.check_output(
+            ["google-chrome", "--version"], stderr=subprocess.DEVNULL, text=True
+        )
+        match = re.search(r"(\d+)\.", output)
+        if match:
+            return int(match.group(1))
+    except Exception:
+        pass
+    return None
 
 # ──────────────────────────────────────────────
 # Methode 1 : nodriver (async, CDP direct)
@@ -93,7 +109,9 @@ def scrape_with_uc(q: str) -> list:
     options.add_argument("--window-size=1280,800")
     options.add_argument("--lang=fr-FR")
 
-    driver = uc.Chrome(options=options, headless=True, use_subprocess=True)
+    version = get_chrome_major_version()
+    print(f"[PAA][uc] Detected Chrome major version: {version}")
+    driver = uc.Chrome(options=options, headless=True, use_subprocess=True, version_main=version)
     print("[PAA][uc] Browser started")
 
     try:
