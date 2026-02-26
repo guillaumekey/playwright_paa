@@ -3,3 +3,4 @@ uvicorn
 nodriver
 undetected-chromedriver
 selenium
+setuptools
