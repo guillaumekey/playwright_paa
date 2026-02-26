@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from playwright.async_api import async_playwright
-import os
+from urllib.parse import quote_plus
 
 app = FastAPI()
 
@@ -11,17 +11,25 @@ async def get_paa(q: str):
             headless=True,
             args=["--no-sandbox", "--disable-setuid-sandbox"]
         )
-        # Remplace ta ligne browser = ... par celle-ci :
-        browser = await p.chromium.launch(
-            headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox"]
-        )
         page = await browser.new_page()
-        await page.goto(f"https://www.google.com/search?q={q}&hl=fr")
-        
-        # On récupère les questions (version rapide sans clics pour le test)
-        questions = await page.query_selector_all('div[role="button"]:has-text("?")')
-        results = [await q.inner_text() for q in questions]
-        
+        await page.goto(
+            f"https://www.google.com/search?q={quote_plus(q)}&hl=fr",
+            wait_until="domcontentloaded"
+        )
+
+        try:
+            await page.wait_for_selector(
+                'div.related-question-pair',
+                timeout=5000
+            )
+        except Exception:
+            await browser.close()
+            return {"query": q, "paa": []}
+
+        results = await page.eval_on_selector_all(
+            'div.related-question-pair',
+            'elements => elements.map(el => el.getAttribute("data-q")).filter(q => q)'
+        )
+
         await browser.close()
         return {"query": q, "paa": list(set(results))}
