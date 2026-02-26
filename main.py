@@ -123,7 +123,7 @@ def scrape_with_uc(q: str) -> list:
 
     version = get_chrome_major_version()
     print(f"[PAA][uc] Detected Chrome major version: {version}")
-    driver = uc.Chrome(options=options, headless=True, use_subprocess=True, version_main=version)
+    driver = uc.Chrome(options=options, headless=False, use_subprocess=True, version_main=version)
     print("[PAA][uc] Browser started")
 
     try:

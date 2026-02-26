@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
-# Lancer Xvfb en arriere-plan (necessaire pour nodriver headless=False)
+# Nettoyer les stale locks de Xvfb (reste d'un precedent run/crash)
+rm -f /tmp/.X99-lock /tmp/.X11-unix/X99
+
+# Lancer Xvfb en arriere-plan (necessaire pour nodriver et uc headless=False)
 echo "Starting Xvfb..."
 Xvfb :99 -screen 0 1280x800x24 -nolisten tcp &
 XVFB_PID=$!
