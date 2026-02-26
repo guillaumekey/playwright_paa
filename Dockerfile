@@ -40,7 +40,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# xvfb-run cree un display virtuel (nodriver headless=False a besoin d'un display)
+# Demarrage: Xvfb en arriere-plan + uvicorn
+RUN chmod +x start.sh
 EXPOSE 10000
-CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x800x24", \
-     "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+CMD ["./start.sh"]
