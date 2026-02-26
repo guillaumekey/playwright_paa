@@ -17,6 +17,13 @@ async def get_paa(q: str):
             wait_until="domcontentloaded"
         )
 
+        # Handle Google cookie consent dialog if present (reject all)
+        try:
+            reject_btn = page.locator('button', has_text='Tout refuser')
+            await reject_btn.click(timeout=3000)
+        except Exception:
+            pass
+
         try:
             await page.wait_for_selector(
                 'div.related-question-pair',
