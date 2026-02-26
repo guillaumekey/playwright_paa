@@ -24,6 +24,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrandr2 \
     xdg-utils \
     xvfb \
+    xauth \
     && rm -rf /var/lib/apt/lists/*
 
 # Installer Google Chrome stable (requis par nodriver et undetected-chromedriver)
