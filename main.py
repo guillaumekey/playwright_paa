@@ -10,23 +10,38 @@ async def get_paa(q: str):
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=True,
-            args=["--no-sandbox", "--disable-setuid-sandbox"]
+            args=[
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+            ]
         )
         print("[PAA] Browser opened")
 
-        context = await browser.new_context()
+        context = await browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+            viewport={"width": 1280, "height": 800},
+            locale="fr-FR",
+        )
         await context.add_cookies([{
-            'name': 'CONSENT',
-            'value': 'YES+1',
+            'name': 'SOCS',
+            'value': 'CAESEwgDEg9yZW1vdGVfY29uc2VudBgB',
             'domain': '.google.com',
             'path': '/'
         }])
-        print("[PAA] CONSENT cookie set")
+        print("[PAA] SOCS cookie set")
+
+        await context.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        """)
+        print("[PAA] Stealth scripts injected")
 
         page = await context.new_page()
         url = f"https://www.google.com/search?q={quote_plus(q)}&hl=fr"
         print(f"[PAA] Navigating to {url}")
-        await page.goto(url, wait_until="domcontentloaded")
+        await page.goto(url, wait_until="networkidle")
+        await page.wait_for_timeout(2000)
 
         title = await page.title()
         print(f"[PAA] Page title: {title}")
