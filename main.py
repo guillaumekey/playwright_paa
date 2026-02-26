@@ -34,6 +34,7 @@ async def scrape_with_nodriver(q: str) -> list:
     try:
         browser = await nd.start(
             headless=False,
+            no_sandbox=True,
             browser_args=[
                 "--no-sandbox",
                 "--disable-setuid-sandbox",
@@ -58,10 +59,21 @@ async def scrape_with_nodriver(q: str) -> list:
         url = f"https://www.google.com/search?q={quote_plus(q)}&hl=fr"
         print(f"[PAA][nodriver] Navigating to {url}")
         tab = await browser.get(url)
-        await tab.sleep(random.uniform(1.5, 4.0))
 
-        title = tab.target.title if tab.target else "N/A"
-        print(f"[PAA][nodriver] Page title: {title}")
+        # Wait for page JS to render (title changes from URL to real title)
+        for _ in range(15):
+            title = tab.target.title if tab.target else ""
+            if title and not title.startswith("http"):
+                break
+            await tab.sleep(1)
+
+        print(f"[PAA][nodriver] Page title: {tab.target.title if tab.target else 'N/A'}")
+
+        # Scroll down to trigger lazy loading of PAA section
+        await tab.evaluate("window.scrollBy(0, 600);")
+        await tab.sleep(1)
+        await tab.evaluate("window.scrollBy(0, 600);")
+        await tab.sleep(random.uniform(1.5, 3.0))
 
         # Extraction PAA via JavaScript (3 strategies en une)
         results = await tab.evaluate("""
@@ -127,10 +139,21 @@ def scrape_with_uc(q: str) -> list:
         url = f"https://www.google.com/search?q={quote_plus(q)}&hl=fr"
         print(f"[PAA][uc] Navigating to {url}")
         driver.get(url)
-        time.sleep(random.uniform(1.5, 4.0))
 
-        title = driver.title
-        print(f"[PAA][uc] Page title: {title}")
+        # Wait for page JS to render (title changes from URL to real title)
+        for _ in range(15):
+            title = driver.title
+            if title and not title.startswith("http"):
+                break
+            time.sleep(1)
+
+        print(f"[PAA][uc] Page title: {driver.title}")
+
+        # Scroll down to trigger lazy loading of PAA section
+        driver.execute_script("window.scrollBy(0, 600);")
+        time.sleep(1)
+        driver.execute_script("window.scrollBy(0, 600);")
+        time.sleep(random.uniform(1.5, 3.0))
 
         # Meme 3 strategies via execute_script
         results = driver.execute_script("""
