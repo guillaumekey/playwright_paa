@@ -2,7 +2,7 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-# Dependencies systeme necessaires pour Chrome
+# Dependances systeme pour Chrome + Xvfb (nodriver ne supporte pas bien headless)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     gnupg \
@@ -23,14 +23,22 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxdamage1 \
     libxrandr2 \
     xdg-utils \
+    xvfb \
+    && rm -rf /var/lib/apt/lists/*
+
+# Installer Google Chrome stable (requis par nodriver et undetected-chromedriver)
+RUN wget -q -O /tmp/chrome.deb \
+    https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends /tmp/chrome.deb \
+    && rm /tmp/chrome.deb \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Installer Chrome via Patchright (pas Chromium, pour plus de stealth)
-RUN patchright install chrome
-
 COPY . .
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]
+# xvfb-run cree un display virtuel (nodriver headless=False a besoin d'un display)
+CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x800x24", \
+     "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "10000"]

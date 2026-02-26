@@ -1,3 +1,5 @@
 fastapi
 uvicorn
-patchright
+nodriver
+undetected-chromedriver
+selenium
