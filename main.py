@@ -13,38 +13,66 @@ async def get_paa(q: str):
             args=["--no-sandbox", "--disable-setuid-sandbox"]
         )
         print("[PAA] Browser opened")
-        page = await browser.new_page()
+
+        context = await browser.new_context()
+        await context.add_cookies([{
+            'name': 'CONSENT',
+            'value': 'YES+1',
+            'domain': '.google.com',
+            'path': '/'
+        }])
+        print("[PAA] CONSENT cookie set")
+
+        page = await context.new_page()
         url = f"https://www.google.com/search?q={quote_plus(q)}&hl=fr"
         print(f"[PAA] Navigating to {url}")
         await page.goto(url, wait_until="domcontentloaded")
-        print("[PAA] Page loaded")
 
-        # Handle Google cookie consent dialog if present (reject all)
-        try:
-            reject_btn = page.locator('button', has_text='Tout refuser')
-            await reject_btn.click(timeout=3000)
-            print("[PAA] Cookie consent dismissed (Tout refuser)")
-        except Exception:
-            print("[PAA] No cookie consent dialog found, skipping")
+        title = await page.title()
+        print(f"[PAA] Page title: {title}")
 
+        results = []
+
+        # Strategy 1: related-question-pair with data-q attribute
         try:
-            await page.wait_for_selector(
+            await page.wait_for_selector('div.related-question-pair', timeout=5000)
+            results = await page.eval_on_selector_all(
                 'div.related-question-pair',
-                timeout=5000
+                'elements => elements.map(el => el.getAttribute("data-q")).filter(q => q)'
             )
-            print("[PAA] PAA section found in DOM")
+            print(f"[PAA] Strategy 1 (related-question-pair): {len(results)} results")
         except Exception:
-            print(f"[PAA] No PAA found for query: {q}")
-            await browser.close()
-            print("[PAA] Browser closed")
-            return {"query": q, "paa": []}
+            print("[PAA] Strategy 1 (related-question-pair): not found")
 
-        results = await page.eval_on_selector_all(
-            'div.related-question-pair',
-            'elements => elements.map(el => el.getAttribute("data-q")).filter(q => q)'
-        )
-        print(f"[PAA] Extracted {len(results)} questions: {results}")
+        # Strategy 2: data-sgrd container with role="button"
+        if not results:
+            try:
+                await page.wait_for_selector('div[data-sgrd="true"]', timeout=3000)
+                results = await page.eval_on_selector_all(
+                    'div[data-sgrd="true"] div[role="button"]',
+                    'elements => elements.map(el => el.innerText.trim()).filter(t => t.includes("?"))'
+                )
+                print(f"[PAA] Strategy 2 (data-sgrd): {len(results)} results")
+            except Exception:
+                print("[PAA] Strategy 2 (data-sgrd): not found")
 
+        # Strategy 3: any div[role="button"] containing "?"
+        if not results:
+            try:
+                results = await page.eval_on_selector_all(
+                    'div[role="button"]',
+                    'elements => elements.map(el => el.innerText.trim()).filter(t => t.includes("?") && t.length > 10 && t.length < 200)'
+                )
+                print(f"[PAA] Strategy 3 (role=button fallback): {len(results)} results")
+            except Exception:
+                print("[PAA] Strategy 3 (role=button fallback): failed")
+
+        # If all strategies failed, dump diagnostic info
+        if not results:
+            snippet = await page.content()
+            print(f"[PAA] ALL STRATEGIES FAILED. HTML snippet: {snippet[:500]}")
+
+        await context.close()
         await browser.close()
-        print("[PAA] Browser closed")
+        print(f"[PAA] Done. Returning {len(results)} questions")
         return {"query": q, "paa": list(set(results))}
